@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REA SEO: {{KW}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0d10; --panel:#11161b; --panel2:#161d23; --line:#232c34; --line2:#2e3943;
+  --ink:#e9eef2; --dim:#8b99a5; --faint:#56636e;
+  --r:#ffb020; --r-soft:rgba(255,176,32,.14);   /* the #1 site */
+  --y:#3ddcff; --y-soft:rgba(61,220,255,.14);   /* you */
+  --ok:#4fd18b; --bad:#ff6b5e;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --sans:"Archivo","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.55 var(--sans);font-variant-numeric:tabular-nums;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:40px 40px}
+a{color:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px}
+.mono{font-family:var(--mono)}
+/* top bar */
+.bar{display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center;padding:18px 0;border-bottom:1px solid var(--line);
+  font:600 13px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.brand{display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:800;letter-spacing:.12em}
+.brand i{width:12px;height:12px;background:var(--r);box-shadow:16px 0 0 var(--y)}
+.brand b{margin-left:18px}
+.bar .sp{flex:1}
+/* hero */
+.hero{padding:54px 0 34px}
+.kicker{font:600 13px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:18px}
+.kicker b{color:var(--ink)}
+.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:28px;align-items:stretch}
+.side{border:1px solid var(--line2);background:var(--panel);padding:26px 28px;position:relative;overflow:hidden}
+.side:before{content:"";position:absolute;inset:0 auto 0 0;width:5px}
+.side.r:before{background:var(--r)} .side.y:before{background:var(--y)}
+.side .who{font:700 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase}
+.side.r .who{color:var(--r)} .side.y .who{color:var(--y)}
+.side h2{font:900 clamp(30px,4.2vw,54px)/1 var(--sans);font-stretch:112%;margin:14px 0 10px;padding-right:84px;letter-spacing:-.01em;word-break:break-word;position:relative;z-index:1}
+.side h2.long{font-size:clamp(20px,2.2vw,28px);word-break:normal;overflow-wrap:anywhere}
+.side h2.xlong{font-size:clamp(17px,1.7vw,21px);word-break:normal;overflow-wrap:anywhere}
+.side .url{font:400 13px/1.4 var(--mono);color:var(--faint);word-break:break-all}
+.side .pos{position:absolute;right:22px;top:14px;font:900 86px/1 var(--sans);font-stretch:70%;opacity:.16}
+.mid{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px}
+.mid .score{font:900 64px/1 var(--sans);font-stretch:75%}
+.mid .score .a{color:var(--r)} .mid .score .b{color:var(--y)} .mid .score em{color:var(--faint);font-style:normal;font-size:.5em;margin:0 8px}
+.mid small{font:600 11px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-align:center}
+.headline{margin:38px 0 0;max-width:30ch;font:800 clamp(28px,3.4vw,44px)/1.12 var(--sans);font-stretch:96%;letter-spacing:-.01em}
+.dek{max-width:72ch;color:var(--dim);font-size:19px;margin:14px 0 0}
+/* scoreboard */
+.board{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:34px 0 10px}
+.cell{display:block;text-decoration:none;border:1px solid var(--line2);background:var(--panel);padding:16px 16px 14px;border-top:4px solid var(--faint);transition:transform .15s}
+.cell:hover{transform:translateY(-2px)}
+.cell b{display:block;font:800 15px/1.2 var(--sans)}
+.cell span{display:block;margin-top:10px;font:800 20px/1 var(--sans);font-stretch:90%}
+.cell small{display:block;margin-top:6px;font:400 12px/1 var(--mono);color:var(--faint)}
+.l-rival{border-top-color:var(--r)} .l-rival span{color:var(--r)}
+.l-you{border-top-color:var(--y)} .l-you span{color:var(--y)}
+.l-tie span{color:var(--dim)}
+/* section titles */
+.sec{padding:46px 0 8px}
+.sec h2{font:900 30px/1 var(--sans);font-stretch:110%;margin:0 0 6px;text-transform:uppercase;letter-spacing:.01em}
+.sec p.s{color:var(--dim);margin:0 0 22px}
+/* areas */
+.areas{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.area{background:var(--panel);border:1px solid var(--line2)}
+.area header{display:flex;justify-content:space-between;align-items:flex-start;padding:20px 22px 14px;border-bottom:1px solid var(--line)}
+.area h3{margin:0;font:900 22px/1.1 var(--sans);font-stretch:105%}
+.area header p{margin:4px 0 0;color:var(--dim);font-size:14px}
+.tally{font:900 30px/1 var(--sans);font-stretch:75%;white-space:nowrap}
+.tally em{font:600 12px var(--mono);color:var(--faint);margin:0 8px;font-style:normal;vertical-align:middle}
+.t-r{color:var(--r)} .t-y{color:var(--y)}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 104px 104px 88px;gap:10px;align-items:center;padding:11px 22px;border-bottom:1px solid var(--line);font-size:15px}
+.row:last-child{border-bottom:0}
+.row.head{padding:8px 22px;font:700 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.val{font:600 15px/1.2 var(--mono);text-align:right}
+.v-r{color:var(--r)} .v-y{color:var(--y)}
+.lead-rival .v-r,.lead-you .v-y{font-weight:800}
+.lead-rival{background:linear-gradient(90deg,var(--r-soft),transparent 60%)}
+.lead-you{background:linear-gradient(90deg,var(--y-soft),transparent 60%)}
+.chip{justify-self:end;font:700 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:6px 8px;border:1px solid var(--line2);color:var(--dim);white-space:nowrap}
+.c-rival{color:var(--r);border-color:var(--r)} .c-you{color:var(--y);border-color:var(--y)}
+.bars{margin-top:7px;display:grid;gap:3px}
+.bars i{display:block;height:4px}
+.b-r{background:var(--r)} .b-y{background:var(--y)}
+/* strip */
+.strip{list-style:none;margin:0;padding:0;border:1px solid var(--line2);background:var(--panel)}
+.strip li{display:grid;grid-template-columns:54px minmax(0,1fr) 140px 140px 110px;gap:10px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line);font:400 15px/1.2 var(--mono)}
+.strip li:last-child{border-bottom:0}
+.strip .pos{font:900 24px/1 var(--sans);color:var(--faint)}
+.strip .dom{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.strip .m{text-align:right} .strip em{font-style:normal;color:var(--faint);font-size:12px}
+.strip .s-r{background:var(--r-soft)} .strip .s-r .pos,.strip .s-r .dom{color:var(--r)}
+.strip .s-y{background:var(--y-soft)} .strip .s-y .pos,.strip .s-y .dom{color:var(--y)}
+/* two col */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{background:var(--panel);border:1px solid var(--line2);padding:22px}
+.card h3{margin:0 0 4px;font:900 20px/1.1 var(--sans)}
+.card .s{color:var(--dim);font-size:14px;margin:0 0 16px}
+.big{font:900 64px/1 var(--sans);font-stretch:75%;color:var(--r)}
+.gap{list-style:none;margin:14px 0 0;padding:0;columns:2;column-gap:18px}
+.gap li{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line2);font:400 14px var(--mono);break-inside:avoid}
+.gap em{color:var(--faint);font-style:normal}
+.aio{list-style:none;margin:0;padding:0}
+.aio li{display:grid;grid-template-columns:190px 1fr 46px;gap:10px;align-items:center;padding:6px 0;font:400 14px var(--mono)}
+.aio li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aio li i{height:12px;background:var(--line2)}
+.aio li b{text-align:right}
+.aio .s-r i{background:var(--r)} .aio .s-r span,.aio .s-r b{color:var(--r)}
+.aio .s-y i{background:var(--y)} .aio .s-y span,.aio .s-y b{color:var(--y)}
+.gpt{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font:400 13px/1.5 var(--mono);color:var(--dim)}
+.topics{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.topics span{font:400 13px/1 var(--mono);padding:7px 9px;border:1px solid var(--r);color:var(--r);background:var(--r-soft)}
+/* plan */
+.plan{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.mv{display:grid;grid-template-columns:70px 1fr;gap:16px;background:var(--panel);border:1px solid var(--line2);padding:20px 22px;border-left:5px solid var(--y)}
+.mv .n{font:900 40px/1 var(--sans);font-stretch:75%;color:var(--faint)}
+.mv h4{margin:8px 0 6px;font:800 21px/1.25 var(--sans)}
+.mv p{margin:0;color:var(--dim)}
+.steps{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:2px}
+.steps label{display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start;padding:9px 10px;cursor:pointer;color:var(--ink);font-size:16px;border:1px solid transparent}
+.steps label:hover{border-color:var(--line2);background:var(--panel2)}
+.steps input{appearance:none;width:20px;height:20px;margin:2px 0 0;border:2px solid var(--faint);background:transparent;cursor:pointer;display:grid;place-content:center}
+.steps input:checked{background:var(--ok);border-color:var(--ok)}
+.steps input:checked:after{content:"";width:10px;height:5px;border:solid #06130c;border-width:0 0 3px 3px;transform:rotate(-45deg) translate(1px,-1px)}
+.steps input:checked+span{color:var(--faint);text-decoration:line-through}
+.meta{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:grid;gap:6px;font:400 13px/1.5 var(--mono);color:var(--dim)}
+.meta b{display:inline-block;min-width:150px;color:var(--faint);font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:11px}
+.prog{display:flex;align-items:center;gap:16px;margin:0 0 18px;font:600 13px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.prog .track{flex:1;height:8px;background:var(--line)} .prog .fill{height:100%;width:0;background:var(--ok);transition:width .25s}
+.files{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:22px}
+.files a{display:block;text-decoration:none;border:1px solid var(--line2);background:var(--panel);padding:16px}
+.files a:hover{border-color:var(--y)}
+.files b{display:block;font:800 16px/1.2 var(--sans)} .files small{display:block;margin-top:6px;font:400 12px/1.4 var(--mono);color:var(--faint)}
+@media (max-width:980px){.files{grid-template-columns:repeat(2,1fr)}}
+.tag{font:700 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:5px 8px;border:1px solid currentColor}
+.t-week{border-left-color:var(--ok)} .t-week .tag{color:var(--ok)}
+.t-time{border-left-color:var(--y)} .t-time .tag{color:var(--y)}
+.t-dont{border-left-color:var(--bad)} .t-dont .tag{color:var(--bad)}
+.t-keep{border-left-color:var(--dim)} .t-keep .tag{color:var(--dim)}
+/* limits */
+.limits{margin:54px 0 0;padding:28px 0 40px;border-top:1px solid var(--line);display:grid;grid-template-columns:1.2fr 1fr;gap:30px;color:var(--dim);font-size:15px}
+.limits h3{color:var(--ink);margin:0 0 8px;font:800 16px/1.2 var(--sans);text-transform:uppercase;letter-spacing:.06em}
+.limits ul{margin:0;padding-left:18px}
+.foot{font:400 12px/1.6 var(--mono);color:var(--faint)}
+@media (max-width:980px){
+  .board{grid-template-columns:repeat(3,1fr)} .areas,.two,.limits{grid-template-columns:1fr}
+  .vs{grid-template-columns:1fr} .mid{flex-direction:row;gap:16px}
+}
+@media (max-width:620px){
+  .wrap{padding:0 16px} .board{grid-template-columns:repeat(2,1fr)}
+  .row{grid-template-columns:minmax(0,1fr) 72px 72px;padding:10px 14px} .row .chip{display:none}
+  .strip li{grid-template-columns:36px minmax(0,1fr) 90px} .strip li .m:nth-child(n+4){display:none}
+  .gap{columns:1} .aio li{grid-template-columns:120px 1fr 40px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <div class="brand"><i></i><b>REA SEO</b></div>
+    <span>Reverse engineer the #1</span><span class="sp"></span>
+    <span>{{LOC}}</span><span>{{DATE}}</span><span>Data cost {{COST}}</span>
+  </div>
+
+  <section class="hero">
+    <div class="kicker">Keyword <b>“{{KW}}”</b></div>
+    <div class="vs">
+      <div class="side r"><span class="pos">#{{R_POS}}</span><div class="who">The #1 result</div><h2 class="{{R_LONG}}">{{R_ROOT}}</h2><div class="url">{{R_URL}}</div></div>
+      <div class="mid"><div class="score"><span class="a">{{RW}}</span><em>vs</em><span class="b">{{YW}}</span></div><small>areas<br>won</small></div>
+      <div class="side y"><span class="pos">#{{Y_POS}}</span><div class="who">You</div><h2 class="{{Y_LONG}}">{{Y_ROOT}}</h2><div class="url">{{Y_URL}}</div></div>
+    </div>
+    <h1 class="headline">{{HEAD}}</h1>
+    <p class="dek">{{DEK}}</p>
+    <nav class="board">{{BOARD}}</nav>
+  </section>
+
+  <section class="sec">
+    <h2>The teardown</h2>
+    <p class="s">Six areas, head to head. Each row is a difference between the two sites, not proof of why Google ranks one higher.</p>
+    <div class="areas">{{AREAS}}</div>
+  </section>
+
+  <section class="sec">
+    <h2>The rest of page one</h2>
+    <p class="s">If the whole top 10 has it, it is table stakes, not the #1's edge.</p>
+    <ul class="strip">{{STRIP}}</ul>
+  </section>
+
+  <section class="sec">
+    <h2>Where the gap really is</h2>
+    <p class="s">Links, AI answers and topics the #1 has that you don't.</p>
+    <div class="two">
+      <div class="card">
+        <h3>Link gap</h3><p class="s">Sites linking to the #1 but not to you</p>
+        <div class="big">{{GAP_TOTAL}}</div>
+        <ul class="gap">{{GAP}}</ul>
+      </div>
+      <div class="card">
+        <h3>AI answer visibility</h3><p class="s">Google AI answers that mention each site, and who else they cite</p>
+        <ul class="aio">{{AIO}}</ul>
+        <div class="gpt">{{GPT}}</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <h3>Topics in the #1's headings that yours don't cover</h3>
+      <div class="topics">{{TOPICS}}</div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>The plan to take #1</h2>
+    <p class="s">Ranked by what is most likely to move first. Steal the strategy, never the content.</p>
+    <div class="prog"><span id="pc">0 of {{NSTEPS}} steps done</span><div class="track"><div class="fill" id="pf"></div></div></div>
+    <ol class="plan">{{MOVES}}</ol>
+  </section>
+
+  <section class="sec">
+    <h2>Take it with you</h2>
+    <p class="s">The plan and the data as files, ready to drop into a project. These links work when the report stays in its package folder.</p>
+    <div class="files">
+      <a href="ACTION_PLAN.md"><b>ACTION_PLAN.md</b><small>The plan as a checklist</small></a>
+      <a href="data/link_gap.csv"><b>link_gap.csv</b><small>Sites to pitch, with outreach columns</small></a>
+      <a href="data/scores.csv"><b>scores.csv</b><small>Every head-to-head check</small></a>
+      <a href="data/baseline.json"><b>baseline.json</b><small>Today's numbers, for the re-check</small></a>
+    </div>
+  </section>
+
+  <div class="limits">
+    <div><h3>What REA SEO can't see</h3><ul>
+      <li>Google's click and engagement data, the biggest ranking input we can't measure.</li>
+      <li>Google Business Profile, reviews and brand strength beyond search volume.</li>
+      <li>The full internal link graph (this checks the page and the homepage only).</li>
+      <li>Backlink and traffic numbers are DataForSEO estimates, a sample of the web, not Google's index.</li>
+    </ul></div>
+    <div class="foot">REA SEO is inspired by REA (Reverse Engineer Anything, github.com/morluto/rea) and is not affiliated with it. Built by AI Ranking on DataForSEO data. One keyword, one SERP, one moment in time: patterns, not proof.</div>
+  </div>
+</div>
+<script>
+(function(){var K="rea-seo:{{SLUG}}",st={};try{st=JSON.parse(localStorage.getItem(K)||"{}")}catch(e){}
+var bx=[].slice.call(document.querySelectorAll(".steps input"));
+function up(){var d=bx.filter(function(b){return b.checked}).length;
+document.getElementById("pc").textContent=d+" of "+bx.length+" steps done";
+document.getElementById("pf").style.width=(bx.length?d/bx.length*100:0)+"%"}
+bx.forEach(function(b){b.checked=!!st[b.dataset.k];b.addEventListener("change",function(){st[b.dataset.k]=b.checked;
+try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}up()})});up()})();
+</script>
+</body>
+</html>
