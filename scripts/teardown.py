@@ -1,16 +1,12 @@
-"""REA SEO, step 2: deep teardown of the #1 site against your site.
+"""REA SEO step 7: free live checks on your page and each rival page + merge the MCP numbers. Free.
 
-Run after collect.py (which gives the top-10 strip and page-level data).
+Usage: python3 teardown.py rea-seo/<slug>
 
-Usage:
-  python scripts/teardown.py runs/<slug> [--rival https://rival.com/page]
-
-Adds runs/<slug>/teardown.json with six areas for both sites:
-  onpage, agentic (AI crawlers, llms.txt, JS-free visibility, AI answers), backlinks,
-  structure (sitemap, folders, depth, homepage link), content (topics), speed (from collect).
-Free checks fetch the live site directly; paid checks use DataForSEO (costs logged).
+Reads  run.json, rivals.json, serp.json, targets.json, mcp.json      Writes teardown.json
+Free checks fetch the live sites directly: HTML on-page, robots.txt AI crawlers, llms.txt,
+sitemap, homepage link, shared topics. Every row is a difference, never a cause.
 """
-import argparse, json, os, re, sys
+import json, os, re, sys
 from collections import Counter
 from urllib.parse import urljoin, urlparse
 import xml.etree.ElementTree as ET
@@ -18,19 +14,16 @@ import xml.etree.ElementTree as ET
 import requests
 from bs4 import BeautifulSoup
 
-sys.path.insert(0, os.path.dirname(__file__))
-from dfs import post, first_result, COST  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from common import UA, load, save, query_terms  # noqa: E402
 
-UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Safari/537.36 REA-SEO/1.0"
 AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-SearchBot",
            "PerplexityBot", "Google-Extended", "CCBot", "Applebot-Extended"]
-LOC_NAME = {2840: "United States", 2036: "Australia", 2826: "United Kingdom", 2124: "Canada", 2152: "Chile"}
 
 
 def get(url, timeout=25):
     try:
-        r = requests.get(url, headers={"User-Agent": UA}, timeout=timeout, allow_redirects=True)
-        return r
+        return requests.get(url, headers={"User-Agent": UA}, timeout=timeout, allow_redirects=True)
     except Exception:  # noqa: BLE001
         return None
 
@@ -44,12 +37,21 @@ def words(text):
     return re.findall(r"\w+", (text or "").lower())
 
 
-# ---------- on-page (raw HTML, no JavaScript) ----------
+def num(v):
+    if v in (None, ""):
+        return None
+    try:
+        return float(v) if "." in str(v) else int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+# ---------- on-page ----------
 
 def schema_types(soup):
-    types, raw_blocks = [], 0
+    types, blocks = [], 0
     for s in soup.find_all("script", type="application/ld+json"):
-        raw_blocks += 1
+        blocks += 1
         try:
             data = json.loads(s.string or "")
         except Exception:  # noqa: BLE001
@@ -62,53 +64,48 @@ def schema_types(soup):
                 t = x.get("@type")
                 if t:
                     types.extend(t if isinstance(t, list) else [t])
-                for v in x.values():
-                    if isinstance(v, (dict, list)):
-                        stack.append(v)
+                stack.extend(v for v in x.values() if isinstance(v, (dict, list)))
             elif isinstance(x, list):
                 stack.extend(x)
-    return sorted(set(map(str, types))), raw_blocks
+    return sorted(set(map(str, types))), blocks
 
 
-def onpage(url, terms, rendered_words):
+def onpage(url, terms):
     r = get(url)
     if r is None or r.status_code >= 400:
         return {"error": f"fetch failed ({getattr(r, 'status_code', 'no response')})"}
     soup = BeautifulSoup(r.text, "html.parser")
     meta = lambda **kw: (soup.find("meta", attrs=kw) or {}).get("content")  # noqa: E731
-    title = (soup.title.string or "").strip() if soup.title else ""
+    title = (soup.title.string or "").strip() if soup.title and soup.title.string else ""
     canon = (soup.find("link", rel="canonical") or {}).get("href")
     heads = [(int(h.name[1]), " ".join(h.get_text(" ").split())) for h in soup.find_all(re.compile("^h[1-4]$"))]
     types, blocks = schema_types(soup)
     for t in soup(["script", "style", "noscript", "template"]):
         t.decompose()
     text = soup.get_text(" ")
-    raw_words = len(words(text))
     host = urlparse(r.url).netloc.removeprefix("www.")
     links = [urljoin(r.url, a.get("href")) for a in soup.find_all("a", href=True)]
     internal = [u for u in links if urlparse(u).netloc.removeprefix("www.") == host]
     imgs = soup.find_all("img")
-    tl = title.lower()
+    tl, low = title.lower(), text.lower()
     h1s = [t for lvl, t in heads if lvl == 1]
+    md = meta(name="description") or ""
     return {
         "final_url": r.url, "status": r.status_code, "html_kb": round(len(r.content) / 1024),
         "title": title, "title_len": len(title), "title_has_terms": sum(t in tl for t in terms),
-        "meta_description": meta(name="description"),
-        "meta_description_len": len(meta(name="description") or ""),
-        "canonical": canon, "canonical_self": bool(canon) and canon.rstrip("/") == r.url.rstrip("/"),
+        "meta_description": md, "meta_description_len": len(md),
+        "canonical": canon, "canonical_self": bool(canon) and urljoin(r.url, canon).rstrip("/") == r.url.rstrip("/"),
         "robots_meta": meta(name="robots"), "og_title": bool(meta(property="og:title")),
-        "og_image": bool(meta(property="og:image")), "lang": (soup.html or {}).get("lang") if soup.html else None,
-        "hreflang": len(soup.find_all("link", hreflang=True)),
+        "og_image": bool(meta(property="og:image")),
         "h1": h1s, "h1_count": len(h1s), "h2_count": sum(1 for l, _ in heads if l == 2),
         "h3_count": sum(1 for l, _ in heads if l == 3), "headings": heads[:80],
-        "schema_types": types, "schema_blocks": blocks,
-        "has_faq_schema": "FAQPage" in types,
-        "internal_links": len(internal), "internal_unique": len(set(u.split("#")[0] for u in internal)),
+        "schema_types": types, "schema_blocks": blocks, "has_faq_schema": "FAQPage" in types,
+        "internal_links": len(internal), "internal_unique": len({u.split("#")[0] for u in internal}),
         "external_links": len(links) - len(internal),
         "images": len(imgs), "images_with_alt": sum(1 for i in imgs if (i.get("alt") or "").strip()),
-        "raw_words": raw_words, "rendered_words": rendered_words,
-        "js_free_share": round(min(1, raw_words / rendered_words), 2) if rendered_words else None,
-        "has_term_in_raw": all(t in text.lower() for t in terms) if terms else None,
+        "raw_words": len(words(text)), "rendered_words": None, "js_free_share": None,
+        "has_term_in_raw": all(t in low for t in terms) if terms else None,
+        "term_mentions": sum(low.count(t) for t in terms),
     }
 
 
@@ -118,8 +115,7 @@ def robots(base):
     r = get(urljoin(base, "/robots.txt"))
     if r is None or r.status_code >= 400:
         return {"found": False, "bots": {b: "allowed (no robots.txt)" for b in AI_BOTS}, "sitemaps": []}
-    groups, cur, sitemaps = {}, [], []
-    last_was_agent = False
+    groups, cur, sitemaps, last_agent = {}, [], [], False
     for line in r.text.splitlines():
         line = line.split("#")[0].strip()
         if ":" not in line:
@@ -127,13 +123,13 @@ def robots(base):
         k, v = [x.strip() for x in line.split(":", 1)]
         k = k.lower()
         if k == "user-agent":
-            if not last_was_agent:
+            if not last_agent:
                 cur = []
             cur.append(v.lower())
             groups.setdefault(v.lower(), [])
-            last_was_agent = True
+            last_agent = True
         else:
-            last_was_agent = False
+            last_agent = False
             if k == "sitemap":
                 sitemaps.append(v)
             elif k in ("allow", "disallow"):
@@ -141,8 +137,7 @@ def robots(base):
                     groups[ua].append((k, v))
 
     def verdict(bot):
-        rules = groups.get(bot.lower())
-        src = "own rule"
+        rules, src = groups.get(bot.lower()), "own rule"
         if rules is None:
             rules, src = groups.get("*", []), "via *"
         blocked = any(k == "disallow" and v == "/" for k, v in rules)
@@ -157,80 +152,12 @@ def llms_txt(base):
     return {"found": ok, "bytes": len(r.text) if ok else 0}
 
 
-def ai_answers(kw, loc, lang, roots):
-    """Does ChatGPT's answer for the keyword cite either site? (DataForSEO LLM scraper)"""
-    try:
-        res = first_result(post("ai_optimization/chat_gpt/llm_scraper/live/advanced",
-                                [{"keyword": kw, "location_name": LOC_NAME.get(loc, "United States"),
-                                  "language_code": lang, "force_web_search": True}], timeout=240))
-    except Exception as e:  # noqa: BLE001
-        return {"error": str(e)[:200]}
-    if not res:
-        return {"error": "no result"}
-    blob = json.dumps(res[0]).lower()
-    urls = re.findall(r'"url":\s*"(https?://[^"]+)"', json.dumps(res[0]))
-    doms = Counter(urlparse(u).netloc.removeprefix("www.") for u in urls)
-    return {"cited": {r: any(d == r or d.endswith("." + r) for d in doms) for r in roots},
-            "mentioned": {r: (r in blob) or (r.split(".")[0] in blob) for r in roots},
-            "sources": [d for d, _ in doms.most_common(12)]}
-
-
-def llm_mentions(root, loc, lang):
-    try:
-        res = first_result(post("ai_optimization/llm_mentions/aggregated_metrics/live",
-                                [{"target": [{"domain": root}], "language_code": lang,
-                                  "location_name": LOC_NAME.get(loc, "United States"), "platform": "google"}]))
-    except Exception as e:  # noqa: BLE001
-        return {"error": str(e)[:200]}
-    if not res:
-        return {"error": "no result"}
-    tot = (res[0].get("total") or {})
-    plat = tot.get("platform") or []
-    mentions = sum((p.get("mentions") or 0) for p in plat) if isinstance(plat, list) else None
-    return {"mentions": mentions, "raw_total": {k: tot[k] for k in list(tot)[:6]}}
-
-
-# ---------- backlinks ----------
-
-def bl_summary(root):
-    res = first_result(post("backlinks/summary/live", [{"target": root, "include_subdomains": True}]))
-    if not res:
-        return {}
-    x = res[0]
-    return {k: x.get(k) for k in ("rank", "backlinks", "referring_domains", "referring_main_domains",
-                                  "referring_ips", "backlinks_spam_score", "broken_backlinks")} | {
-        "dofollow_share": round(1 - (x.get("referring_domains_nofollow") or 0) / x["referring_domains"], 2)
-        if x.get("referring_domains") else None}
-
-
-def top_refdomains(root, n=8):
-    res = first_result(post("backlinks/referring_domains/live",
-                            [{"target": root, "limit": 40, "order_by": ["rank,desc"]}]))
-    items = [i for i in ((res[0].get("items") or []) if res else []) if (i.get("backlinks_spam_score") or 0) < 40]
-    return [{"domain": i.get("domain"), "rank": i.get("rank"), "backlinks": i.get("backlinks")} for i in items[:n]]
-
-
-def link_gap(rival, you, n=15):
-    """Domains linking to the rival but not to you."""
-    res = first_result(post("backlinks/domain_intersection/live",
-                            [{"targets": {"1": rival}, "exclude_targets": [you], "limit": 60,
-                              "order_by": ["1.rank,desc"]}]))
-    out = []
-    for i in (res[0].get("items") or []) if res else []:
-        d = (i.get("domain_intersection") or {}).get("1") or {}
-        if (d.get("backlinks_spam_score") or 0) >= 40 or len(out) >= n:
-            continue
-        out.append({"domain": d.get("target"), "rank": d.get("rank"), "backlinks": d.get("backlinks"),
-                    "first_seen": (d.get("first_seen") or "")[:10]})
-    return {"total": (res[0].get("total_count") if res else None), "items": out}
-
-
-# ---------- pages & structure ----------
+# ---------- structure ----------
 
 def sitemap_urls(base, hinted, cap=6000):
     seen, urls = set(), []
     queue = list(hinted) or [urljoin(base, p) for p in
-                                     ("/sitemap.xml", "/sitemap_index.xml", "/wp-sitemap.xml", "/sitemap/sitemap.xml")]
+                             ("/sitemap.xml", "/sitemap_index.xml", "/wp-sitemap.xml", "/sitemap/sitemap.xml")]
     while queue and len(urls) < cap and len(seen) < 40:
         sm = queue.pop(0)
         if sm in seen:
@@ -240,102 +167,122 @@ def sitemap_urls(base, hinted, cap=6000):
         if r is None or r.status_code >= 400:
             continue
         try:
-            root = ET.fromstring(r.content)
+            rt = ET.fromstring(r.content)
         except ET.ParseError:
             continue
-        locs = [e.text.strip() for e in root.iter() if e.tag.endswith("loc") and e.text]
-        if root.tag.endswith("sitemapindex"):
+        locs = [e.text.strip() for e in rt.iter() if e.tag.endswith("loc") and e.text]
+        if rt.tag.endswith("sitemapindex"):
             queue.extend(locs)
         else:
             urls.extend(locs)
     return urls[:cap], len(seen)
 
 
-def structure(base, page_url, hinted_sitemaps, terms):
-    urls, n_maps = sitemap_urls(base, hinted_sitemaps)
+def structure(base, page_url, hinted, terms):
+    urls, n_maps = sitemap_urls(base, hinted)
     paths = [urlparse(u).path for u in urls]
-    depth = Counter(len([p for p in x.split("/") if p]) for x in paths)
     folders = Counter((x.strip("/").split("/")[0] or "(home)") for x in paths)
-    topical = [u for u in urls if terms and all(t in u.lower() for t in terms[:2])]
+    key = [t for t in terms if len(t) > 2][:2] or terms[:1]
+    topical = [u for u in urls if key and all(t in u.lower() for t in key)]
     home = get(base)
-    linked_from_home = False
+    linked = False
     if home is not None and home.status_code < 400:
         hs = BeautifulSoup(home.text, "html.parser")
-        target_path = urlparse(page_url).path.rstrip("/") or "/"
-        linked_from_home = any((urlparse(urljoin(home.url, a["href"])).path.rstrip("/") or "/") == target_path
-                               for a in hs.find_all("a", href=True))
-    pdepth = len([p for p in urlparse(page_url).path.split("/") if p])
+        tp = urlparse(page_url).path.rstrip("/") or "/"
+        linked = tp == "/" or any((urlparse(urljoin(home.url, a["href"])).path.rstrip("/") or "/") == tp
+                                  for a in hs.find_all("a", href=True))
     return {"sitemap_found": bool(urls), "sitemap_files": n_maps, "sitemap_urls": len(urls),
-            "top_folders": folders.most_common(8), "depth": sorted(depth.items()),
-            "topical_urls": len(topical), "topical_examples": topical[:6],
-            "page_depth": pdepth, "page_linked_from_home": linked_from_home}
+            "top_folders": folders.most_common(8), "topical_urls": len(topical),
+            "topical_examples": topical[:6],
+            "page_depth": len([p for p in urlparse(page_url).path.split("/") if p]),
+            "page_linked_from_home": linked}
 
 
-# ---------- content ----------
-
-def topic_gap(rival_heads, you_heads):
+def shared_topics(rival_heads, you_heads):
+    """Heading words used by at least two rivals that your headings never use."""
     def toks(heads):
         out = set()
         for _, t in heads:
-            out |= {w for w in words(t) if len(w) > 3}
+            out |= {w for w in words(t) if len(w) > 3 and not w.isdigit()}
         return out
-    r, y = toks(rival_heads), toks(you_heads)
-    return {"rival_only": sorted(r - y)[:40], "you_only": sorted(y - r)[:40], "shared": len(r & y)}
+    y = toks(you_heads)
+    c = Counter()
+    for h in rival_heads:
+        c.update(toks(h) - y)
+    need = 2 if len(rival_heads) > 1 else 1
+    return sorted(w for w, k in c.items() if k >= need)[:40]
 
 
 # ---------- main ----------
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("run")
-    ap.add_argument("--rival", help="rival page URL (default: the #1 web result)")
-    a = ap.parse_args()
-    col = json.load(open(os.path.join(a.run, "collected.json")))
-    kw, loc, lang, terms = col["keyword"], col["location_code"], col["language_code"], col["terms"]
-    res = col["results"]
-    you = next((r for r in res if r.get("is_target")), None)
-    if not you:
-        raise SystemExit("No target page in collected.json: rerun collect.py with --site (and --page).")
-    rival = None
-    if a.rival:
-        rival = next((r for r in res if r["url"].rstrip("/") == a.rival.rstrip("/")), None) or {
-            "url": a.rival, "domain": urlparse(a.rival).netloc, "root": urlparse(a.rival).netloc.removeprefix("www."),
-            "position": None, "kind": "web"}
-    else:
-        rival = next(r for r in sorted(res, key=lambda r: r["position"] or 99)
-                     if r["kind"] == "web" and not r.get("is_target"))
-    pair = {"rival": rival, "you": you}
-    out = {"keyword": kw, "rival_url": rival["url"], "you_url": you["url"], "sites": {}}
+def main(run):
+    cfg, rv, serp = load(f"{run}/run.json"), load(f"{run}/rivals.json"), load(f"{run}/serp.json", {})
+    tg, m = load(f"{run}/targets.json"), load(f"{run}/mcp.json", {})
+    if not tg:
+        sys.exit("Run prepare.py first.")
+    kw, terms = cfg["primary"], query_terms(cfg["primary"])
+    types, ms = m.get("page_types") or {}, m.get("sites") or {}
+    aio = {(d or "").removeprefix("www.") for d in serp.get("ai_overview_refs") or []}
+    pack = serp.get("local_pack") or []
 
-    for side, r in pair.items():
-        print(f"[{side}] {r['url']}")
-        base = origin(r["url"])
-        rendered = (r.get("content") or {}).get("word_count")
+    sites = []
+    for t in tg["sites"]:
+        print(f"[{t['role']}] {t['url']}")
+        d = ms.get(t["root"]) or {}
+        base = origin(t["url"])
         rb = robots(base)
-        out["sites"][side] = {
-            "root": r["root"], "position": r.get("position"),
-            "onpage": onpage(r["url"], terms, rendered),
+        rd, nf = num(d.get("referring_domains")), num(d.get("referring_domains_nofollow"))
+        g = d.get("gbp") or {}
+        name = (g.get("name") or t["brand"] or "").lower()
+        sites.append({
+            "role": t["role"], "root": t["root"], "brand": t["brand"], "url": t["url"],
+            "position": t["position"], "live_position": t.get("live_position"),
+            "page_type": types.get(t["url"]),
+            "onpage": onpage(t["url"], terms),
             "agentic": {"robots": rb, "llms_txt": llms_txt(base),
-                        "in_ai_overview": any((x.get("domain") or "").removeprefix("www.").endswith(r["root"])
-                                              for x in col["serp"].get("ai_overview_refs") or []),
-                        "llm_mentions": llm_mentions(r["root"], loc, lang)},
-            "backlinks": {"summary": bl_summary(r["root"]), "top_domains": top_refdomains(r["root"]),
-                          "page": r.get("links") or {}, "anchors": r.get("anchors") or {}},
-            "structure": structure(base, r["url"], rb.get("sitemaps") or [], terms),
-            "speed": r.get("lighthouse") or {},
-            "site_metrics": r.get("site") or {},
-        }
-    print("[gap] link gap + ChatGPT answer + topic gap")
-    out["link_gap"] = link_gap(rival["root"], you["root"])
-    out["chatgpt"] = ai_answers(kw, loc, lang, [rival["root"], you["root"]])
-    out["topic_gap"] = topic_gap(out["sites"]["rival"]["onpage"].get("headings") or [],
-                                 out["sites"]["you"]["onpage"].get("headings") or [])
-    out["cost"] = {"total_usd": round(COST["total"], 4), "calls": len(COST["calls"]),
-                   "collect_usd": (col.get("cost") or {}).get("total_usd")}
-    path = os.path.join(a.run, "teardown.json")
-    json.dump(out, open(path, "w"), indent=1, ensure_ascii=False)
-    print(f"done -> {path}  teardown cost ${COST['total']:.3f}")
+                        "in_ai_overview": any(x == t["root"] or x.endswith("." + t["root"]) for x in aio),
+                        "llm_mentions": num(d.get("llm_mentions"))},
+            "backlinks": {"rank": num(d.get("rank")), "referring_domains": rd,
+                          "spam_score": num(d.get("spam_score")),
+                          "dofollow_share": round(1 - (nf or 0) / rd, 2) if rd else None,
+                          "page_referring_domains": num(d.get("page_referring_domains"))},
+            "structure": structure(base, t["url"], rb.get("sitemaps") or [], terms),
+            "speed": {k: num(d.get(k)) for k in ("performance", "lcp_ms", "cls")},
+            "site_metrics": {"created": d.get("created"), "brand_volume": num(d.get("brand_volume")),
+                             "etv": num(d.get("etv"))},
+            "gbp": {**{k: g.get(k) for k in ("name", "city", "category", "claimed")},
+                    **{k: num(g.get(k)) for k in ("extra_categories", "rating", "reviews", "photos", "services")},
+                    "in_pack": any(name and (name in (p.get("title") or "").lower()
+                                            or (p.get("title") or "").lower() in name) for p in pack)},
+        })
+
+    rows = [{**x, "page_type": types.get(x["url"], "other")} for x in tg["rows"]]
+    gap = m.get("link_gap") or {}
+    gp = m.get("chatgpt") or {}
+    srcs = [d.removeprefix("www.") for d in gp.get("sources") or []]
+    roots = [s["root"] for s in sites]
+    you = sites[0]
+    out = {
+        "site": cfg["site"], "brand": cfg["brand"], "keyword": kw,
+        "location": cfg["location_name"], "serp_location": cfg["serp_location"],
+        "matrix": {"keywords": rv["keywords"], "you": rv["you"]["positions"],
+                   "rivals": [{k: x[k] for k in ("root", "beats", "ranked", "avg", "positions")} for x in rv["rivals"]],
+                   "others": [{k: x[k] for k in ("root", "kind", "beats", "avg")} for x in rv.get("others") or []]},
+        "serp": {"rows": rows, "features": serp.get("features") or [], "local_pack": pack,
+                 "type_counts": Counter(x["page_type"] for x in rows).most_common()},
+        "sites": sites,
+        "link_gap": {"total": num(gap.get("total")),
+                     "items": [{"domain": i.get("domain"), "rank": num(i.get("rank")), "spam": num(i.get("spam"))}
+                               for i in gap.get("items") or []][:15]},
+        "chatgpt": {"sources": srcs, "mentioned": gp.get("mentioned") or {},
+                    "cited": {r: any(d == r or d.endswith("." + r) for d in srcs) for r in roots}},
+        "shared_topics": shared_topics([s["onpage"].get("headings") or [] for s in sites[1:]],
+                                       you["onpage"].get("headings") or []),
+        "calls": m.get("calls"),
+    }
+    save(f"{run}/teardown.json", out)
+    print(f"done -> {run}/teardown.json")
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1].rstrip("/\\"))
