@@ -1,6 +1,6 @@
 # REA SEO
 
-Reverse engineer the #1 Google result for your keyword, side by side with your own page, and get a plan to take the spot. About $1 per keyword.
+Reverse engineer the #1 Google result (or the top real competitor, when #1 is a directory) side by side with your own page, and get a plan to take the spot. About $1 per keyword.
 
 A free skill for Claude Code. Inspired by [REA (Reverse Engineer Anything)](https://github.com/morluto/rea), not affiliated with it.
 
@@ -29,11 +29,21 @@ Every row is a difference between two sites, not proof of why Google ranks one h
 
 You need **Claude Code** (in the terminal, or the **Code** tab of the Claude desktop app), Python 3.9+, and a [DataForSEO account](https://app.dataforseo.com/?aff=182182) with a few dollars of credit.
 
-**Easiest:** in Claude Code, paste:
+**1. Add the DataForSEO MCP to Claude Code** (skip if you already have it in Claude Code). Use your **API** login from [app.dataforseo.com/api-access](https://app.dataforseo.com/api-access), not your website password:
+
+```bash
+claude mcp add dataforseo -s user -e DATAFORSEO_USERNAME=your-api-login -e DATAFORSEO_PASSWORD=your-api-password -- npx -y dataforseo-mcp-server
+```
+
+REA SEO picks up that login automatically, so it never has to ask you for it.
+
+> Only have DataForSEO as a connector in claude.ai settings? That login lives on Anthropic's servers and the skill can't read it. Run the command above once as well.
+
+**2. Install the skill.** In Claude Code, paste:
 
 > Install this skill: https://github.com/NicoSKOOL/rea-seo
 
-**Or by hand** (Mac / Linux; on Windows use `%USERPROFILE%\.claude\skills\rea-seo`):
+Or by hand (Mac / Linux; on Windows use `%USERPROFILE%\.claude\skills\rea-seo`):
 
 ```bash
 git clone https://github.com/NicoSKOOL/rea-seo ~/.claude/skills/rea-seo
@@ -48,7 +58,7 @@ Open Claude Code in the folder you want the results saved in and ask:
 
 > Use REA SEO for "home appraiser virginia beach" against mysite.com, United States
 
-The first time, it checks your setup and asks for your DataForSEO **API** login (from [app.dataforseo.com/api-access](https://app.dataforseo.com/api-access), not your website password). It saves it to `.env` inside the skill folder. It tells you the cost before it spends anything.
+It first runs a free setup check (Python, packages, your DataForSEO login and balance), then tells you the cost before it spends anything. After page one is pulled, it picks the rival: the highest result that is a real competing business, skipping directories like Yellow Pages, Yelp or Facebook.
 
 About 3 minutes later the report opens in your browser.
 

@@ -15,7 +15,7 @@ import csv, json, os, shutil, sys
 from datetime import date
 
 sys.path.insert(0, os.path.dirname(__file__))
-from report import fmt, g, LEAD_TXT  # noqa: E402
+from report import fmt, g, LEAD_TXT, relabel  # noqa: E402
 
 TAG = {"week": "Do this week", "time": "Takes time", "dont": "Don't copy", "keep": "Keep doing"}
 
@@ -37,10 +37,10 @@ def main(run):
 
     with open(f"{pkg}/data/scores.csv", "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["area", "check", R["root"] + " (#1)", Y["root"] + " (you)", "who leads"])
+        w.writerow(["area", "check", relabel(R["root"] + " (#1)", R), Y["root"] + " (you)", "who leads"])
         for a in scores:
             for r in a["rows"]:
-                w.writerow([a["name"], r["label"], fmt(r["rival"], r["kind"]), fmt(r["you"], r["kind"]), LEAD_TXT[r["lead"]]])
+                w.writerow([a["name"], r["label"], fmt(r["rival"], r["kind"]), fmt(r["you"], r["kind"]), relabel(LEAD_TXT[r["lead"]], R)])
 
     with open(f"{pkg}/data/top10.csv", "w", newline="") as fh:
         w = csv.writer(fh)
@@ -53,7 +53,7 @@ def main(run):
     gap = td.get("link_gap") or {}
     with open(f"{pkg}/data/link_gap.csv", "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["domain", "domain rank", "links to the #1", "first seen", "pitched on", "reply", "notes"])
+        w.writerow(["domain", "domain rank", relabel("links to the #1", R), "first seen", "pitched on", "reply", "notes"])
         for i in gap.get("items", []):
             w.writerow([i.get("domain"), i.get("rank"), i.get("backlinks"), i.get("first_seen"), "", "", ""])
 
@@ -91,7 +91,7 @@ def main(run):
           "- The full internal link graph (page and homepage only).",
           "- Link and traffic numbers are DataForSEO estimates, not Google's index.", "",
           "Every finding is a difference between two sites, not proof of why Google ranks one higher."]
-    open(f"{pkg}/ACTION_PLAN.md", "w").write("\n".join(L) + "\n")
+    open(f"{pkg}/ACTION_PLAN.md", "w").write(relabel("\n".join(L) + "\n", R))
 
     open(f"{pkg}/README.md", "w").write(f"""# REA SEO package: "{col['keyword']}"
 
@@ -116,6 +116,8 @@ Rerun REA SEO on the same keyword in 30 days and compare the new numbers with `d
 
 Inspired by REA (github.com/morluto/rea), not affiliated.
 """)
+    readme = f"{pkg}/README.md"
+    open(readme, "w").write(relabel(open(readme).read(), R))
     zip_path = shutil.make_archive(f"{run}/rea-seo-{os.path.basename(run)}", "zip", pkg)
     print(f"-> {pkg}/\n-> {zip_path}")
 

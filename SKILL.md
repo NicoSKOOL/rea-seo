@@ -21,13 +21,21 @@ Cost about $0.95 of DataForSEO credit per keyword. Runtime about 3 minutes.
 Every row is a difference between two sites, never a cause. Never write "this is why Google ranks them".
 Steal the strategy, never the content.
 
-## Step 0: setup check (every first run, free)
+## Step 0: setup check (FIRST, before any research, free)
 `python3 "$SKILL_DIR/scripts/check_setup.py"`
+- The scripts find the DataForSEO login by themselves: environment variables, a `.env`, or the
+  DataForSEO MCP saved in Claude Code (`~/.claude.json`, `.mcp.json`) or Claude desktop config.
+  So when it prints `OK ... login works (from MCP ...)`, never ask the user for a login.
 - Missing packages: run the pip command it prints.
-- Missing login: ask the user for their DataForSEO API login (app.dataforseo.com/api-access, not the
-  website password) and write it to `"$SKILL_DIR/.env"` as `DATAFORSEO_USERNAME=` / `DATAFORSEO_PASSWORD=`.
-  Never echo the password back in chat.
-- Rerun until every line is OK. Then tell the user the run costs about $0.95 and confirm before step 1.
+- No login found, or every login rejected: the user's DataForSEO MCP is probably a claude.ai
+  connector, whose login the scripts cannot read. Say that in one line and give them the fix:
+  `claude mcp add dataforseo -s user -e DATAFORSEO_USERNAME=<login> -e DATAFORSEO_PASSWORD=<password> -- npx -y dataforseo-mcp-server`
+  (API login from app.dataforseo.com/api-access, not the website password), then rerun the check.
+  If they would rather paste it, write it to `"$SKILL_DIR/.env"`. Never echo the password back.
+- Once every line is OK, tell the user the run costs about $0.95 and confirm before step 1.
+
+Do NOT call DataForSEO MCP / connector tools yourself to research the keyword or the SERP.
+The scripts pull everything, and doing it twice spends the user's credit twice.
 
 ## Ask for (one message)
 Keyword, their domain, country (2840 US, 2036 AU, 2826 UK, 2124 CA, 2152 CL; any DataForSEO location
@@ -36,8 +44,11 @@ code works), language code. Optional: their exact page URL, a specific rival URL
 ## Run
 1. `python3 "$SKILL_DIR/scripts/collect.py" --keyword "<kw>" --site <domain> [--page <url>] --location <code> --language <lang>`
    Top 10 + page data. Prints the run folder `rea-seo/<slug>`.
-2. `python3 "$SKILL_DIR/scripts/teardown.py" rea-seo/<slug> [--rival <url>]`
-   Deep #1 vs you. Default rival = the #1 web result. If the user's site is #1, use #2 as the rival and say so.
+2. Pick the rival from `rea-seo/<slug>/collected.json` (already paid for, no new calls): the highest
+   organic result that is a real competing business page. Skip directories, marketplaces, review
+   sites, social profiles, Wikipedia and government pages (Yellow Pages, Yelp, Facebook, etc.).
+   If the user's site is #1, use the next real business. Tell the user which rival and why in one line.
+   `python3 "$SKILL_DIR/scripts/teardown.py" rea-seo/<slug> --rival <url>`
 3. `python3 "$SKILL_DIR/scripts/report.py" rea-seo/<slug>` writes scores.json + report.html.
 4. Read scores.json + teardown.json and write `rea-seo/<slug>/plan.json` (schema below).
 5. Rerun step 3 (the report now includes the plan), then
@@ -57,6 +68,7 @@ Do NOT rebuild, restyle or summarise the report as your own HTML or markdown pag
             "watch": "<a row label copied exactly from scores.json>", "baseline": "today's value"}]}
 ```
 - 4 to 6 moves, ordered by impact. Check every number against the JSON. No em dashes.
+- If the rival is not position 1, call it "the rival" or by its domain in every field, never "the #1".
 - Include a "dont" move when the #1 wins despite something (do not copy that).
 - Include a "keep" move for something the user already beats them on.
 

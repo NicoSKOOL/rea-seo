@@ -23,23 +23,23 @@ line(not missing, "Python packages (requests, beautifulsoup4)",
 
 if not missing:
     import dfs
-    dfs._load_dotenv()
-    have = bool(os.environ.get("DATAFORSEO_USERNAME") and os.environ.get("DATAFORSEO_PASSWORD"))
-    line(have, "DataForSEO login found",
-         f'Copy "{os.path.join(skill, ".env.example")}" to ".env" in the same folder and fill in the API login')
-    if have:
-        import requests
-        try:
-            r = requests.get(f"{dfs.BASE}/appendix/user_data", headers={"Authorization": dfs._auth()}, timeout=30)
-            res = (r.json().get("tasks") or [{}])[0].get("result") or [{}]
-            bal = (res[0].get("money") or {}).get("balance")
-            good = r.status_code == 200 and bal is not None
-            line(good, f"DataForSEO login works, balance ${bal:.2f}" if good else "DataForSEO login works",
-                 "Login rejected. Use the API login from app.dataforseo.com/api-access")
-            if good and bal < 1.5:
-                print("WARN Balance is under $1.50. One run costs about $0.95.")
-        except Exception as e:  # noqa: BLE001
-            line(False, "DataForSEO reachable", f"Could not reach api.dataforseo.com ({str(e)[:80]})")
+    found = list(dfs.candidates())
+    line(bool(found), f"DataForSEO login found ({len(found)} saved)" if found else "DataForSEO login found",
+         "Install the DataForSEO MCP in Claude Code with your API login (see README), "
+         f'or copy "{os.path.join(skill, ".env.example")}" to ".env" and fill it in')
+    if found:
+        good = None
+        for src, u, p in found:
+            bal = dfs.check_login(u, p)
+            if bal is not None:
+                good = (src, bal)
+                break
+            print(f"WARN Rejected by DataForSEO: login from {src}")
+        line(bool(good), f"DataForSEO login works (from {good[0]}), balance ${good[1]:.2f}" if good
+             else "DataForSEO login works",
+             "Every saved login was rejected. Get the current API login from app.dataforseo.com/api-access")
+        if good and good[1] < 1.5:
+            print("WARN Balance is under $1.50. One run costs about $0.95.")
 
 print("INFO yt-dlp " + ("found" if shutil.which("yt-dlp") else "not found (optional: only adds YouTube video stats)"))
 sys.exit(0 if ok else 1)

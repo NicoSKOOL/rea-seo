@@ -178,6 +178,21 @@ def bar_pair(row):
 
 LEAD_TXT = {"rival": "#1 leads", "you": "You lead", "tie": "Even", "ctx": "Context"}
 
+# When the rival is not the #1 result (the #1 was a directory, or you are #1), say "rival", not "#1".
+RIVAL_WORDS = [("The #1 result", "The rival"), ("#1 leads", "Rival leads"), ('class="val v-r">#1<', 'class="val v-r">Rival<'),
+               ("the #1's", "the rival's"), ("the #1 but", "the rival but"), ("the #1 has", "the rival has"),
+               ("against the #1 result", "against the rival"), ("The #1:", "The rival:"), (" (#1)", " (rival)"),
+               ("#1 vs you", "rival vs you"), ("links to the #1", "links to the rival")]
+
+
+def relabel(text, rival):
+    """Swap '#1' wording for 'rival' when the rival page is not position 1."""
+    if (rival or {}).get("position") == 1:
+        return text
+    for a, b in RIVAL_WORDS:
+        text = text.replace(a, b)
+    return text
+
 
 def area_html(a):
     rows = []
@@ -294,8 +309,8 @@ def render(run):
     for k, v in rep.items():
         tpl = tpl.replace(k, v)
     out = os.path.join(run, "report.html")
-    open(out, "w").write(tpl)
-    print(f"-> {out}  (#1 leads {rw} areas, you lead {yw})")
+    open(out, "w").write(relabel(tpl, R))
+    print(relabel(f"-> {out}  (#1 leads {rw} areas, you lead {yw})", R))
 
 
 if __name__ == "__main__":
